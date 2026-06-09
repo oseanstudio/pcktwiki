@@ -1,0 +1,51 @@
+{
+  "lexicon": 1,
+  "id": "wiki.pckt.page",
+  "defs": {
+    "main": {
+      "type": "record",
+      "description": "A single page in a pckt.wiki space.",
+      "key": "tid",
+      "record": {
+        "type": "object",
+        "required": ["title", "slug", "body", "createdAt"],
+        "properties": {
+          "title": { "type": "string", "maxLength": 200 },
+          "slug": { "type": "string", "maxLength": 120 },
+          "body": { "type": "string", "maxLength": 100000 },
+          "order": { "type": "integer" },
+          "parent": { "type": "string", "maxLength": 120 },
+          "pageType": {
+            "type": "string",
+            "knownValues": ["page", "blog-list", "blog-post"]
+          },
+          "embeds": {
+            "type": "array",
+            "items": { "type": "ref", "ref": "#embed" },
+            "maxLength": 50
+          },
+          "coverImage": {
+            "type": "blob",
+            "accept": ["image/*"],
+            "maxSize": 1000000
+          },
+          "createdAt": { "type": "string", "format": "datetime" },
+          "updatedAt": { "type": "string", "format": "datetime" }
+        }
+      }
+    },
+    "embed": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "knownValues": ["blog-post", "blog-list", "link-card"]
+        },
+        "atUri": { "type": "string", "format": "at-uri" },
+        "url": { "type": "string", "format": "uri" },
+        "title": { "type": "string", "maxLength": 200 }
+      }
+    }
+  }
+}
