@@ -1,0 +1,27 @@
+{
+	"lexicon": 1,
+	"id": "wiki.pckt.bookmark",
+	"defs": {
+		"main": {
+			"type": "record",
+			"description": "A bookmark for a wiki. Stored on the user's PDS, portable across appviews. This is a pckt.wiki record type — Lichen itself does not define one — so it lives under the pckt namespace rather than borrowing wiki.lichen.",
+			"key": "tid",
+			"record": {
+				"type": "object",
+				"required": ["wikiRef", "createdAt"],
+				"properties": {
+					"wikiRef": {
+						"type": "string",
+						"format": "at-uri",
+						"description": "AT-URI of the bookmarked wiki."
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "datetime",
+						"description": "When the bookmark was created."
+					}
+				}
+			}
+		}
+	}
+}

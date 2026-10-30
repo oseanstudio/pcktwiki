@@ -1,0 +1,38 @@
+{
+	"lexicon": 1,
+	"id": "wiki.lichen.membership",
+	"defs": {
+		"main": {
+			"type": "record",
+			"description": "A membership grant for a wiki. The rkey is a TID. The member's DID lives in the record body.",
+			"key": "tid",
+			"record": {
+				"type": "object",
+				"required": ["memberDid", "wikiRef", "role", "createdAt"],
+				"properties": {
+					"memberDid": {
+						"type": "string",
+						"maxLength": 2048,
+						"description": "DID of the member being granted access."
+					},
+					"wikiRef": {
+						"type": "string",
+						"format": "at-uri",
+						"description": "AT-URI of the wiki."
+					},
+					"role": {
+						"type": "string",
+						"maxLength": 32,
+						"knownValues": ["admin", "contributor", "viewer"],
+						"description": "The member's role in the wiki."
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "datetime",
+						"description": "When the membership was granted."
+					}
+				}
+			}
+		}
+	}
+}

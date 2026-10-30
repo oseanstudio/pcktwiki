@@ -1,0 +1,27 @@
+{
+	"lexicon": 1,
+	"id": "wiki.lichen.memberRequest",
+	"defs": {
+		"main": {
+			"type": "record",
+			"description": "A request to join a wiki.",
+			"key": "tid",
+			"record": {
+				"type": "object",
+				"required": ["wikiRef", "createdAt"],
+				"properties": {
+					"wikiRef": {
+						"type": "string",
+						"format": "at-uri",
+						"description": "AT-URI of the wiki the user wants to join."
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "datetime",
+						"description": "When the request was made."
+					}
+				}
+			}
+		}
+	}
+}

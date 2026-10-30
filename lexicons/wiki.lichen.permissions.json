@@ -1,0 +1,24 @@
+{
+	"lexicon": 1,
+	"id": "wiki.lichen.permissions",
+	"defs": {
+		"main": {
+			"type": "permission-set",
+			"title": "Lichen Wiki",
+			"detail": "Create and edit wikis, notes, and manage memberships and bookmarks.",
+			"permissions": [
+				{
+					"type": "permission",
+					"resource": "repo",
+					"collection": [
+						"wiki.lichen.wiki",
+						"wiki.lichen.note",
+						"wiki.lichen.noteRevision",
+						"wiki.lichen.membership",
+						"wiki.lichen.memberRequest"
+					]
+				}
+			]
+		}
+	}
+}

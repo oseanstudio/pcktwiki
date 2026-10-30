@@ -19,12 +19,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      # Reports the URL this repository's Pages site is actually served from:
+      # https://user.github.io/repo/ normally, or the custom domain if one is
+      # configured under Settings → Pages. Everything else — Vite's base, the
+      # OAuth client id, the PWA manifest — is derived from it, so a fork needs
+      # no configuration to deploy under its own name.
+      - id: pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci
       - run: npm run build
+        env:
+          # A repository variable named SITE_URL overrides the detected URL, for
+          # deployments that do not go through GitHub Pages.
+          VITE_SITE_URL: ${{ vars.SITE_URL || steps.pages.outputs.base_url }}
+          SITE_NAME: ${{ vars.SITE_NAME }}
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

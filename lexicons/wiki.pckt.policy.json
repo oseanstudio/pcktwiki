@@ -1,0 +1,47 @@
+{
+	"lexicon": 1,
+	"id": "wiki.pckt.policy",
+	"defs": {
+		"main": {
+			"type": "record",
+			"description": "Collaboration policy for one wiki, stored in the wiki owner's repo. The rkey is a TID; the wiki is referenced by at-uri. When no policy record exists, apps should fall back to the defaults documented per field (members contribute, public reads, images unrestricted, submissions off).",
+			"key": "tid",
+			"record": {
+				"type": "object",
+				"required": ["wikiRef", "createdAt"],
+				"properties": {
+					"wikiRef": {
+						"type": "string",
+						"format": "at-uri",
+						"description": "AT-URI of the wiki this policy applies to."
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "datetime",
+						"description": "When the policy was created."
+					},
+					"editAccess": {
+						"type": "string",
+						"maxLength": 32,
+						"knownValues": ["members", "followers", "anyone"],
+						"description": "Who may contribute edits beyond the wiki owner and members. 'members' (default) only membership records grant access; 'followers' adds people the wiki owner follows; 'anyone' adds any signed-in user. Contributors who cannot publish to the wiki repo submit suggestions for review instead."
+					},
+					"suggestionsEnabled": {
+						"type": "boolean",
+						"description": "Whether edit-on-approval is on: contributors who cannot publish directly may submit proposed edits that land in the wiki's review queue. Default true. Turning it off makes non-publishing contributors read-only."
+					},
+					"imageMode": {
+						"type": "string",
+						"maxLength": 32,
+						"knownValues": ["any", "approved", "none"],
+						"description": "What images non-owner contributors may embed. 'any' (default) allows uploading new blobs; 'approved' restricts embeds to wiki.pckt.approvedMedia entries; 'none' allows text-only edits."
+					},
+					"imageSubmissions": {
+						"type": "boolean",
+						"description": "Whether contributors may submit photos to the wiki's approved-media queue even when imageMode blocks direct embedding. Default false."
+					}
+				}
+			}
+		}
+	}
+}

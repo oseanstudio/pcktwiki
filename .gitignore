@@ -8,9 +8,15 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+node_modules.dropbox-bak
 dist
 dist-ssr
 *.local
+
+# Local build config; .env.example documents the options.
+.env
+.env.*
+!.env.example
 
 # Editor directories and files
 .vscode/*
@@ -22,3 +28,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local agent/tool state
+.claude/
+.zcode/

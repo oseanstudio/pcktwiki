@@ -1,0 +1,59 @@
+{
+	"lexicon": 1,
+	"id": "wiki.pckt.approvedMedia",
+	"defs": {
+		"main": {
+			"type": "record",
+			"description": "A photo approved for use in one wiki, stored in the wiki owner's repo (which also holds the blob). The rkey is a TID. When a wiki's policy sets imageMode 'approved', contributors may only embed images listed here.",
+			"key": "tid",
+			"record": {
+				"type": "object",
+				"required": ["wikiRef", "imageCid", "createdAt"],
+				"properties": {
+					"wikiRef": {
+						"type": "string",
+						"format": "at-uri",
+						"description": "AT-URI of the wiki the media belongs to."
+					},
+					"imageCid": {
+						"type": "string",
+						"maxLength": 2048,
+						"description": "CID of the blob in the wiki owner's repo, as referenced by markdown image embeds (blob:CID)."
+					},
+					"blob": {
+						"type": "blob",
+						"accept": ["image/jpeg", "image/png", "image/gif", "image/webp"],
+						"maxSize": 2097152,
+						"description": "The blob reference itself, so the record keeps the image fetchable."
+					},
+					"mimeType": {
+						"type": "string",
+						"maxLength": 128,
+						"description": "MIME type of the image."
+					},
+					"alt": {
+						"type": "string",
+						"maxLength": 1024,
+						"description": "Alt text describing the image."
+					},
+					"addedBy": {
+						"type": "string",
+						"maxLength": 2048,
+						"description": "DID of the account the image came from — the owner, or the contributor whose submission was approved."
+					},
+					"source": {
+						"type": "string",
+						"maxLength": 32,
+						"knownValues": ["owner", "submission"],
+						"description": "'owner' when the wiki owner uploaded it directly; 'submission' when it arrived through a wiki.pckt.suggestion photo submission."
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "datetime",
+						"description": "When the media was approved."
+					}
+				}
+			}
+		}
+	}
+}

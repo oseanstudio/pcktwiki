@@ -1,11 +1,15 @@
 <script setup lang="ts">
-import type { StandardSiteDocument, StandardSitePublication } from '@/types/wiki'
+import { RouterLink } from 'vue-router'
+import type { LichenNoteWithContent, StandardSiteDocument, StandardSitePublication } from '@/types/lichen'
 import { documentToPcktBlogUrl, formatDocumentDate } from '@/lib/standardsite/blog'
 import MarkdownRenderer from '@/components/MarkdownRenderer.vue'
 
-defineProps<{
+const props = defineProps<{
   posts: StandardSiteDocument[]
   publications: StandardSitePublication[]
+  wikiNoteLinks?: Map<string, LichenNoteWithContent>
+  ownerHandle?: string
+  wikiSlug?: string
 }>()
 </script>
 
@@ -32,7 +36,14 @@ defineProps<{
         v-if="post.content"
         :source="post.content.slice(0, 600) + (post.content.length > 600 ? '…' : '')"
       />
-      <footer>
+      <footer class="post-footer">
+        <RouterLink
+          v-if="wikiNoteLinks?.get(post.uri) && ownerHandle && wikiSlug"
+          :to="`/@${ownerHandle}/${wikiSlug}/${wikiNoteLinks.get(post.uri)!.slug}`"
+          class="wiki-link"
+        >
+          Wiki articles →
+        </RouterLink>
         <a
           v-if="documentToPcktBlogUrl(post, publications[0]?.url)"
           :href="documentToPcktBlogUrl(post, publications[0]?.url)!"
@@ -81,9 +92,15 @@ defineProps<{
   margin: 0 0 0.75rem;
 }
 
-.read-more {
-  display: inline-block;
+.post-footer {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
   margin-top: 0.75rem;
+}
+
+.read-more,
+.wiki-link {
   font-weight: 600;
   font-size: 0.9375rem;
 }

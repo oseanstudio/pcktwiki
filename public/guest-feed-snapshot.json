@@ -1,0 +1,224 @@
+{
+  "items": [],
+  "wikis": [
+    {
+      "handle": "juprodh.me",
+      "slug": "welcome-to-lichen",
+      "blurb": "Introduction to Lichen wikis on AT Protocol",
+      "topics": [
+        "at-protocol",
+        "community",
+        "getting-started"
+      ],
+      "name": "welcome to lichen",
+      "accentColor": "#21dc66",
+      "pdsHost": "me"
+    },
+    {
+      "handle": "mfzx.net",
+      "slug": "at-protocol-paper-errata-and-details",
+      "blurb": "Errata and deep dives on the AT Protocol paper",
+      "topics": [
+        "at-protocol"
+      ],
+      "name": "at protocol paper errata and details",
+      "accentColor": "#58a7ff",
+      "pdsHost": "net"
+    },
+    {
+      "handle": "stellapent.wiki",
+      "slug": "stellapent-cier-community-wiki",
+      "blurb": "Shared lore for the Stellapent Cier universe",
+      "topics": [
+        "lore",
+        "community"
+      ],
+      "name": "stellapent cier community wiki",
+      "accentColor": "#ff5d5b",
+      "pdsHost": "wiki"
+    },
+    {
+      "handle": "rechargednintendo.eurosky.social",
+      "slug": "florets-retreat",
+      "blurb": "Floret's Retreat HDG AU wiki on a self-hosted PDS",
+      "topics": [
+        "lore",
+        "community"
+      ],
+      "name": "florets retreat",
+      "accentColor": "#ff5d5b",
+      "pdsHost": "eurosky.social"
+    },
+    {
+      "handle": "windfreaker.dev",
+      "slug": "digital-garden",
+      "blurb": "A cozy personal digital garden",
+      "topics": [
+        "garden",
+        "personal"
+      ],
+      "name": "digital garden",
+      "accentColor": "#21dc66",
+      "pdsHost": "dev"
+    },
+    {
+      "handle": "myrkvi.no",
+      "slug": "test",
+      "blurb": "A small starter wiki for trying Lichen on your PDS",
+      "topics": [
+        "getting-started",
+        "personal"
+      ],
+      "name": "test",
+      "accentColor": "#21dc66",
+      "pdsHost": "no"
+    }
+  ],
+  "edges": [
+    {
+      "from": {
+        "handle": "juprodh.me",
+        "slug": "welcome-to-lichen",
+        "blurb": "Introduction to Lichen wikis on AT Protocol",
+        "topics": [
+          "at-protocol",
+          "community",
+          "getting-started"
+        ],
+        "name": "welcome to lichen",
+        "accentColor": "#21dc66",
+        "pdsHost": "me"
+      },
+      "to": {
+        "handle": "mfzx.net",
+        "slug": "at-protocol-paper-errata-and-details",
+        "blurb": "Errata and deep dives on the AT Protocol paper",
+        "topics": [
+          "at-protocol"
+        ],
+        "name": "at protocol paper errata and details",
+        "accentColor": "#58a7ff",
+        "pdsHost": "net"
+      },
+      "label": "Learn AT Protocol after Lichen basics",
+      "source": "curated"
+    },
+    {
+      "from": {
+        "handle": "juprodh.me",
+        "slug": "welcome-to-lichen",
+        "blurb": "Introduction to Lichen wikis on AT Protocol",
+        "topics": [
+          "at-protocol",
+          "community",
+          "getting-started"
+        ],
+        "name": "welcome to lichen",
+        "accentColor": "#21dc66",
+        "pdsHost": "me"
+      },
+      "to": {
+        "handle": "windfreaker.dev",
+        "slug": "digital-garden",
+        "blurb": "A cozy personal digital garden",
+        "topics": [
+          "garden",
+          "personal"
+        ],
+        "name": "digital garden",
+        "accentColor": "#21dc66",
+        "pdsHost": "dev"
+      },
+      "label": "See a personal wiki in practice",
+      "source": "curated"
+    },
+    {
+      "from": {
+        "handle": "stellapent.wiki",
+        "slug": "stellapent-cier-community-wiki",
+        "blurb": "Shared lore for the Stellapent Cier universe",
+        "topics": [
+          "lore",
+          "community"
+        ],
+        "name": "stellapent cier community wiki",
+        "accentColor": "#ff5d5b",
+        "pdsHost": "wiki"
+      },
+      "to": {
+        "handle": "rechargednintendo.eurosky.social",
+        "slug": "florets-retreat",
+        "blurb": "Floret's Retreat HDG AU wiki on a self-hosted PDS",
+        "topics": [
+          "lore",
+          "community"
+        ],
+        "name": "florets retreat",
+        "accentColor": "#ff5d5b",
+        "pdsHost": "eurosky.social"
+      },
+      "label": "Another community lore wiki on a different PDS",
+      "source": "curated"
+    },
+    {
+      "from": {
+        "handle": "juprodh.me",
+        "slug": "welcome-to-lichen",
+        "blurb": "Introduction to Lichen wikis on AT Protocol",
+        "topics": [
+          "at-protocol",
+          "community",
+          "getting-started"
+        ],
+        "name": "welcome to lichen",
+        "accentColor": "#21dc66",
+        "pdsHost": "me"
+      },
+      "to": {
+        "handle": "myrkvi.no",
+        "slug": "test",
+        "blurb": "A small starter wiki for trying Lichen on your PDS",
+        "topics": [
+          "getting-started",
+          "personal"
+        ],
+        "name": "test",
+        "accentColor": "#21dc66",
+        "pdsHost": "no"
+      },
+      "label": "Try a small wiki after the Lichen intro",
+      "source": "curated"
+    },
+    {
+      "from": {
+        "handle": "myrkvi.no",
+        "slug": "test",
+        "blurb": "A small starter wiki for trying Lichen on your PDS",
+        "topics": [
+          "getting-started",
+          "personal"
+        ],
+        "name": "test",
+        "accentColor": "#21dc66",
+        "pdsHost": "no"
+      },
+      "to": {
+        "handle": "windfreaker.dev",
+        "slug": "digital-garden",
+        "blurb": "A cozy personal digital garden",
+        "topics": [
+          "garden",
+          "personal"
+        ],
+        "name": "digital garden",
+        "accentColor": "#21dc66",
+        "pdsHost": "dev"
+      },
+      "label": "From a starter wiki to a personal garden",
+      "source": "curated"
+    }
+  ],
+  "fetchedAt": "2026-09-06T22:46:57.940Z",
+  "networkWarning": "Could not load recent updates right now.",
+  "rateLimited": false
+}

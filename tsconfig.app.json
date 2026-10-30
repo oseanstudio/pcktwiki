@@ -3,10 +3,10 @@
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "types": ["vite/client"],
-    "ignoreDeprecations": "6.0",
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"],
+      "@silkdown/core": ["./node_modules/silkdown-monorepo/packages/core/dist/index.d.ts"],
+      "@silkdown/core/theme.css": ["./node_modules/silkdown-monorepo/packages/core/dist/theme.css"]
     },
 
     /* Linting */

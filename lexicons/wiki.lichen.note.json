@@ -1,0 +1,83 @@
+{
+	"lexicon": 1,
+	"id": "wiki.lichen.note",
+	"defs": {
+		"main": {
+			"type": "record",
+			"description": "A note within a wiki. The rkey is a TID. Human-readable slug lives in the record body.",
+			"key": "tid",
+			"record": {
+				"type": "object",
+				"required": [
+					"slug",
+					"title",
+					"wikiRef",
+					"createdAt"
+				],
+				"properties": {
+					"slug": {
+						"type": "string",
+						"maxLength": 256,
+						"description": "Permanent human-readable identifier, used in URLs. Never changes once set."
+					},
+					"title": {
+						"type": "string",
+						"maxLength": 256,
+						"description": "Display name for the note. Can be updated freely."
+					},
+					"navTitle": {
+						"type": "string",
+						"maxLength": 64,
+						"description": "Optional label shown in the wiki sidebar and quick nav. When omitted, clients use title."
+					},
+					"wikiRef": {
+						"type": "string",
+						"format": "at-uri",
+						"description": "AT-URI of the parent wiki record."
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "datetime",
+						"description": "When the note was created."
+					},
+					"subheaderLinks": {
+						"type": "array",
+						"maxLength": 16,
+						"description": "Page-specific subheader navigation links shown under the page title.",
+						"items": {
+							"type": "ref",
+							"ref": "#headerLink"
+						}
+					}
+				}
+			}
+		},
+		"headerLink": {
+			"type": "object",
+			"description": "A single custom header navigation link.",
+			"required": [
+				"label"
+			],
+			"properties": {
+				"label": {
+					"type": "string",
+					"maxLength": 64,
+					"description": "Text shown for the link."
+				},
+				"url": {
+					"type": "string",
+					"maxLength": 1024,
+					"description": "Internal note slug/path, or an absolute URL. Optional: a link may exist as a label and image with no destination yet."
+				},
+				"image": {
+					"type": "blob",
+					"accept": [
+						"image/*"
+					],
+					"maxSize": 1000000,
+					"description": "Optional icon image shown above or beside the label."
+				}
+			}
+		}
+	}
+}

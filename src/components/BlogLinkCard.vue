@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { assetUrl } from '@/lib/base-url'
 import { parsePcktBlogUrl } from '@/lib/config'
 
 const props = defineProps<{
@@ -26,7 +27,7 @@ const hostname = computed(() => {
     class="link-card card"
   >
     <div class="link-card-icon">
-      <img src="/favicon-32x32.png" alt="" width="24" height="24" />
+      <img :src="assetUrl('favicon-32x32.png')" alt="" width="24" height="24" />
     </div>
     <div>
       <p class="link-card-label">pckt.blog</p>
@@ -51,7 +52,7 @@ const hostname = computed(() => {
 }
 
 .link-card:hover {
-  border-color: var(--pckt-accent);
+  border-color: var(--pckt-red);
   box-shadow: var(--pckt-shadow);
   text-decoration: none;
 }
@@ -72,7 +73,7 @@ const hostname = computed(() => {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--pckt-accent);
+  color: var(--pckt-red);
   font-weight: 700;
 }
 

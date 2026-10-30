@@ -1,0 +1,234 @@
+import { RichText, type Agent } from '@atproto/api'
+
+import {
+  blobCid,
+  blobRefToJson,
+  buildBlobUrl,
+  isBlobUrl,
+  uploadBlob,
+} from '@/lib/atproto/blobs'
+import { resolvePdsUrl } from '@/lib/atproto/pds'
+import { findMarkdownImages } from '@/lib/editor/image-align'
+
+const HTML_IMAGE_RE = /<img[^>]+src=["']([^"']+)["']/gi
+const MAX_IMAGES_PER_POST = 4
+
+export function toHashtag(label: string): string {
+  return label.toLowerCase().replace(/[^a-z0-9]/g, '')
+}
+
+/** Wiki slug first, then categories. Deduped; empty tags dropped. */
+export function buildPublishHashtags(wikiSlug: string, categories: string[]): string[] {
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const label of [wikiSlug, ...categories]) {
+    const tag = toHashtag(label)
+    if (!tag || seen.has(tag)) continue
+    seen.add(tag)
+    out.push(tag)
+  }
+  return out
+}
+
+export function extractImageUrls(markdown: string): string[] {
+  const urls: string[] = []
+  const seen = new Set<string>()
+
+  const add = (url: string | null | undefined) => {
+    const trimmed = url?.trim()
+    if (!trimmed || seen.has(trimmed)) return
+    seen.add(trimmed)
+    urls.push(trimmed)
+  }
+
+  for (const image of findMarkdownImages(markdown)) {
+    add(image.url)
+    add(image.thumbUrl)
+  }
+
+  HTML_IMAGE_RE.lastIndex = 0
+  let match: RegExpExecArray | null
+  while ((match = HTML_IMAGE_RE.exec(markdown)) !== null) {
+    add(match[1])
+  }
+
+  return urls
+}
+
+export function diffNewImageUrls(before: string, after: string): string[] {
+  const prev = new Set(extractImageUrls(before))
+  return extractImageUrls(after).filter((url) => !prev.has(url))
+}
+
+function cidFromImageUrl(url: string): string | null {
+  const fromBlob = blobCid(url)
+  if (fromBlob) return fromBlob
+  try {
+    const parsed = new URL(url)
+    if (parsed.pathname.includes('getBlob')) {
+      return parsed.searchParams.get('cid')
+    }
+  } catch {
+    // not a URL
+  }
+  return null
+}
+
+function chunkArray<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = []
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size))
+  }
+  return chunks
+}
+
+async function fetchImageBytes(
+  agent: Agent,
+  url: string,
+): Promise<{ buffer: ArrayBuffer; mimeType: string }> {
+  const did = agent.accountDid
+  const cid = cidFromImageUrl(url)
+
+  if (cid && did) {
+    const pdsUrl = await resolvePdsUrl(did)
+    const blobUrl = buildBlobUrl(pdsUrl, did, cid)
+    const response = await fetch(blobUrl)
+    if (!response.ok) throw new Error(`Failed to fetch blob ${cid}`)
+    return {
+      buffer: await response.arrayBuffer(),
+      mimeType: response.headers.get('content-type') || 'image/jpeg',
+    }
+  }
+
+  if (/^https?:\/\//i.test(url)) {
+    const response = await fetch(url)
+    if (!response.ok) throw new Error(`Failed to fetch image ${url}`)
+    return {
+      buffer: await response.arrayBuffer(),
+      mimeType: response.headers.get('content-type') || 'image/jpeg',
+    }
+  }
+
+  throw new Error(`Unsupported image URL: ${url}`)
+}
+
+export type SessionBlobMap = Map<string, unknown>
+
+/**
+ * Blob refs from this editing session that appear in markdown — attach these
+ * on the note revision so PDS getBlob can serve them after save.
+ */
+export function collectSessionBlobsForContent(
+  content: string,
+  sessionBlobs: SessionBlobMap,
+): Record<string, unknown>[] {
+  const out: Record<string, unknown>[] = []
+  const seen = new Set<string>()
+  for (const url of extractImageUrls(content)) {
+    const cached = sessionBlobs.get(url)
+    const json = cached ? blobRefToJson(cached) : null
+    if (!json) continue
+    const cid = blobCid(json)
+    if (!cid || seen.has(cid)) continue
+    seen.add(cid)
+    out.push(json)
+  }
+  return out
+}
+
+export async function resolveImageBlobsForPost(
+  agent: Agent,
+  urls: string[],
+  sessionBlobs: SessionBlobMap,
+): Promise<Array<{ blob: Record<string, unknown>; alt: string }>> {
+  const images: Array<{ blob: Record<string, unknown>; alt: string }> = []
+
+  for (const url of urls) {
+    if (!isBlobUrl(url) && !/^https?:\/\//i.test(url)) continue
+
+    const cached = sessionBlobs.get(url)
+    const fromSession = cached ? blobRefToJson(cached) : null
+    if (fromSession) {
+      images.push({ blob: fromSession, alt: '' })
+      continue
+    }
+
+    const { buffer, mimeType } = await fetchImageBytes(agent, url)
+    const file = new File([buffer], 'image', { type: mimeType })
+    const { blob } = await uploadBlob(agent, file)
+    const json = blobRefToJson(blob)
+    if (!json) throw new Error('Failed to encode uploaded image blob')
+    images.push({ blob: json, alt: '' })
+  }
+
+  return images
+}
+
+export function buildPostText(title: string, noteUrl: string, hashtags: string[]): string {
+  const lines = [title.trim(), noteUrl.trim()]
+  if (hashtags.length) {
+    lines.push(hashtags.map((tag) => `#${tag}`).join(' '))
+  }
+  return lines.filter(Boolean).join('\n')
+}
+
+export async function createImagePosts(
+  agent: Agent,
+  opts: {
+    title: string
+    noteUrl: string
+    hashtags: string[]
+    images: Array<{ blob: Record<string, unknown>; alt: string }>
+  },
+): Promise<{ uris: string[] }> {
+  if (!opts.images.length) return { uris: [] }
+
+  const text = buildPostText(opts.title, opts.noteUrl, opts.hashtags)
+  const rt = new RichText({ text })
+  rt.detectFacetsWithoutResolution()
+
+  const uris: string[] = []
+  for (const chunk of chunkArray(opts.images, MAX_IMAGES_PER_POST)) {
+    const result = await agent.post({
+      text: rt.text,
+      facets: rt.facets,
+      embed: {
+        $type: 'app.bsky.embed.images',
+        images: chunk.map((image) => ({
+          alt: image.alt,
+          image: image.blob as never,
+        })),
+      },
+    })
+    uris.push(result.uri)
+  }
+  return { uris }
+}
+
+export async function postNewWikiImagesToBluesky(
+  agent: Agent,
+  opts: {
+    title: string
+    noteUrl: string
+    wikiSlug: string
+    categories: string[]
+    previousContent: string
+    nextContent: string
+    sessionBlobs: SessionBlobMap
+  },
+): Promise<{ uris: string[]; skipped: boolean }> {
+  const newUrls = diffNewImageUrls(opts.previousContent, opts.nextContent)
+  if (!newUrls.length) return { uris: [], skipped: true }
+
+  const hashtags = buildPublishHashtags(opts.wikiSlug, opts.categories)
+  const images = await resolveImageBlobsForPost(agent, newUrls, opts.sessionBlobs)
+  if (!images.length) return { uris: [], skipped: true }
+
+  const { uris } = await createImagePosts(agent, {
+    title: opts.title,
+    noteUrl: opts.noteUrl,
+    hashtags,
+    images,
+  })
+  return { uris, skipped: false }
+}

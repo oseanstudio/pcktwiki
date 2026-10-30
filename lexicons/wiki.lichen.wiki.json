@@ -1,0 +1,206 @@
+{
+	"lexicon": 1,
+	"id": "wiki.lichen.wiki",
+	"defs": {
+		"main": {
+			"type": "record",
+			"description": "A wiki. The rkey is a permanent slug.",
+			"key": "any",
+			"record": {
+				"type": "object",
+				"required": [
+					"name",
+					"visibility",
+					"createdAt",
+					"language"
+				],
+				"properties": {
+					"name": {
+						"type": "string",
+						"maxLength": 256,
+						"description": "Display name of the wiki."
+					},
+					"visibility": {
+						"type": "string",
+						"maxLength": 32,
+						"knownValues": [
+							"public",
+							"private"
+						],
+						"description": "Access level."
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "datetime",
+						"description": "When the wiki was created."
+					},
+					"language": {
+						"type": "string",
+						"maxLength": 16,
+						"description": "BCP-47 language tag for the wiki content (e.g. 'en', 'fr', 'ja')."
+					},
+					"description": {
+						"type": "string",
+						"maxLength": 300,
+						"description": "Short description of the wiki's purpose or topic."
+					},
+					"theme": {
+						"type": "string",
+						"maxLength": 64,
+						"knownValues": [
+							"light",
+							"dark"
+						],
+						"description": "Optional theme preference set by the wiki creator (e.g. 'light', 'dark'). When present, clients should render with this theme; when absent, the viewer's own preference is used. Apps that don't recognize the name should fall back to their default."
+					},
+					"accentColor": {
+						"type": "string",
+						"maxLength": 32,
+						"description": "Accent colour applied to links and highlights, as a CSS hex value (e.g. '#ff5d5b'). Clients that don't recognize the value should fall back to their default."
+					},
+					"bgColor": {
+						"type": "string",
+						"maxLength": 32,
+						"description": "Page background colour as a CSS hex value."
+					},
+					"cardColor": {
+						"type": "string",
+						"maxLength": 32,
+						"description": "Article card / elevated surface colour as a CSS hex value."
+					},
+					"sidebarColor": {
+						"type": "string",
+						"maxLength": 32,
+						"description": "Sidebar surface colour as a CSS hex value."
+					},
+					"headerColor": {
+						"type": "string",
+						"maxLength": 32,
+						"description": "App header / nav chrome colour as a CSS hex value."
+					},
+					"fontFamily": {
+						"type": "string",
+						"maxLength": 64,
+						"description": "Preferred content font family name (e.g. 'Lora'). Clients should fall back to their default serif when the font is unavailable."
+					},
+					"layoutWidth": {
+						"type": "string",
+						"maxLength": 16,
+						"knownValues": ["narrow", "medium", "wide"],
+						"description": "Preferred reading column width for wiki content."
+					},
+					"forkedFrom": {
+						"type": "string",
+						"format": "at-uri",
+						"description": "AT-URI of the source wiki.lichen.wiki record this wiki was forked from."
+					},
+					"forkedAt": {
+						"type": "string",
+						"format": "datetime",
+						"description": "When this wiki was forked from its source."
+					},
+					"headerLinks": {
+						"type": "array",
+						"maxLength": 16,
+						"description": "Custom illustrated navigation links displayed at the top of wiki pages, each with an optional icon image.",
+						"items": {
+							"type": "ref",
+							"ref": "#headerLink"
+						}
+					},
+					"navbarLinks": {
+						"type": "array",
+						"maxLength": 16,
+						"description": "Text links shown in the app top navbar while viewing this wiki (e.g. Home, Game, Manga).",
+						"items": {
+							"type": "ref",
+							"ref": "#navLink"
+						}
+					},
+					"sidebarOrder": {
+						"type": "array",
+						"maxLength": 500,
+						"description": "Ordered note slugs for the left sidebar page list. When present (including an empty list), only these slugs are shown, in this order. When absent, all articles are listed A–Z. Unknown slugs are ignored.",
+						"items": {
+							"type": "string",
+							"maxLength": 256
+						}
+					},
+					"headerImage": {
+						"type": "blob",
+						"accept": [
+							"image/*"
+						],
+						"maxSize": 1000000,
+						"description": "Optional image shown in the app header in place of the default pckt wordmark when viewing this wiki. Wide logos work best."
+					},
+					"deletedAt": {
+						"type": "string",
+						"format": "datetime",
+						"description": "When the wiki was moved to trash. Soft-deleted wikis should be hidden from normal and public views; clients may restore until permanently purged."
+					},
+					"deletedFromVisibility": {
+						"type": "string",
+						"maxLength": 32,
+						"knownValues": [
+							"public",
+							"private"
+						],
+						"description": "Visibility before soft-delete, restored when the wiki is undeleted."
+					},
+					"redirectSlug": {
+						"type": "string",
+						"maxLength": 128,
+						"description": "If set, this wiki slug has moved. Clients should redirect to this slug under the same owner."
+					}
+				}
+			}
+		},
+		"headerLink": {
+			"type": "object",
+			"description": "A single custom header navigation link.",
+			"required": [
+				"label"
+			],
+			"properties": {
+				"label": {
+					"type": "string",
+					"maxLength": 64,
+					"description": "Text shown for the link."
+				},
+				"url": {
+					"type": "string",
+					"maxLength": 1024,
+					"description": "Internal note slug/path, or an absolute URL. Optional: a link may exist as a label and image with no destination yet."
+				},
+				"image": {
+					"type": "blob",
+					"accept": [
+						"image/*"
+					],
+					"maxSize": 1000000,
+					"description": "Optional icon image shown above or beside the label."
+				}
+			}
+		},
+		"navLink": {
+			"type": "object",
+			"description": "A single top navbar text link.",
+			"required": [
+				"label"
+			],
+			"properties": {
+				"label": {
+					"type": "string",
+					"maxLength": 64,
+					"description": "Text shown for the link."
+				},
+				"url": {
+					"type": "string",
+					"maxLength": 1024,
+					"description": "Internal note slug/path, or an absolute URL. Optional: a link may exist as a label and image with no destination yet."
+				}
+			}
+		}
+	}
+}

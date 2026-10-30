@@ -3,8 +3,10 @@ import type {
   ActorProfile,
   StandardSiteDocument,
   StandardSitePublication,
-} from '@/types/wiki'
-import { STANDARD_DOCUMENT, STANDARD_PUBLICATION } from '@/types/wiki'
+} from '@/types/lichen'
+
+export const STANDARD_PUBLICATION = 'site.standard.publication'
+export const STANDARD_DOCUMENT = 'site.standard.document'
 
 export async function getActorProfile(agent: Agent, did: string): Promise<ActorProfile> {
   try {
@@ -125,7 +127,8 @@ export async function getStandardDocumentByUri(
 }
 
 export function documentToPcktBlogUrl(document: StandardSiteDocument, publicationUrl?: string): string | null {
-  if (publicationUrl && document.path) {
+  // Publication URLs are wiki-owner records — only http(s) may become a link.
+  if (publicationUrl && /^https?:\/\//i.test(publicationUrl) && document.path) {
     const base = publicationUrl.replace(/\/$/, '')
     const path = document.path.startsWith('/') ? document.path : `/${document.path}`
     return `${base}${path}`

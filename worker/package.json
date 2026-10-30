@@ -1,0 +1,20 @@
+{
+  "name": "pcktwiki-donations-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:schema": "wrangler d1 execute donations --remote --file=db/schema.sql",
+    "db:schema:local": "wrangler d1 execute donations --local --file=db/schema.sql",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.0.0",
+    "typescript": "^5.7.0",
+    "wrangler": "^4.0.0"
+  },
+  "dependencies": {
+    "stripe": "^18.0.0"
+  }
+}

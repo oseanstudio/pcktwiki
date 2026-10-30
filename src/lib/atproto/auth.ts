@@ -1,26 +1,32 @@
 import { BrowserOAuthClient, type OAuthSession } from '@atproto/oauth-client-browser'
 import { Agent } from '@atproto/api'
-import { getOAuthConfig } from '@/lib/config'
+import { getDevLoopbackClientMetadata, getHandleResolver, getOAuthConfig } from '@/lib/config'
+import { getRepoReadAgent } from '@/lib/atproto/pds'
+import { getCachedDid, setCachedDid } from '@/lib/atproto/handle-cache'
+import { createRetryFetch, toUserFacingNetworkError, withRetry } from '@/lib/http-retry'
 
 const SESSION_SUB_KEY = 'pckt.wiki.sessionSub'
 
 let oauthClient: BrowserOAuthClient | null = null
 let activeSession: OAuthSession | null = null
+let initPromise: ReturnType<typeof initializeAuth> | null = null
 
 export async function getOAuthClient(): Promise<BrowserOAuthClient> {
   if (oauthClient) return oauthClient
 
   const config = getOAuthConfig()
 
+  const handleResolver = getHandleResolver()
+
   if (import.meta.env.DEV) {
     oauthClient = new BrowserOAuthClient({
-      handleResolver: config.handleResolver,
-      clientMetadata: undefined,
+      handleResolver,
+      clientMetadata: getDevLoopbackClientMetadata(),
     })
   } else {
     oauthClient = await BrowserOAuthClient.load({
       clientId: config.clientId,
-      handleResolver: config.handleResolver,
+      handleResolver,
     })
   }
 
@@ -33,23 +39,34 @@ export async function initializeAuth(): Promise<{
   did: string
   handle: string | null
 } | null> {
-  const client = await getOAuthClient()
-  const result = await client.init()
+  if (initPromise) return initPromise
 
-  if (result?.session) {
-    activeSession = result.session
-    localStorage.setItem(SESSION_SUB_KEY, result.session.sub)
-    const agent = new Agent(result.session)
-    const handle = await fetchHandle(agent)
-    return {
-      session: result.session,
-      agent,
-      did: agent.accountDid,
-      handle,
+  initPromise = (async () => {
+    const client = await getOAuthClient()
+    const result = await client.init()
+
+    if (result?.session) {
+      activeSession = result.session
+      localStorage.setItem(SESSION_SUB_KEY, result.session.sub)
+      const agent = new Agent(result.session)
+      const handle = await fetchHandle(agent)
+      return {
+        session: result.session,
+        agent,
+        did: agent.accountDid,
+        handle,
+      }
     }
-  }
 
-  return null
+    return null
+  })()
+
+  try {
+    return await initPromise
+  } catch (err) {
+    initPromise = null
+    throw err
+  }
 }
 
 async function fetchHandle(agent: Agent): Promise<string | null> {
@@ -62,6 +79,7 @@ async function fetchHandle(agent: Agent): Promise<string | null> {
 }
 
 export async function signIn(handle: string): Promise<void> {
+  await initializeAuth()
   const client = await getOAuthClient()
   await client.signInRedirect(handle)
 }
@@ -93,10 +111,28 @@ export async function getAuthenticatedAgent(): Promise<Agent | null> {
   }
 }
 
+let publicAgent: Agent | null = null
+
 export async function resolveHandleToDid(handle: string): Promise<string> {
-  const agent = getPublicAgent()
-  const resolved = await agent.resolveHandle({ handle: normalizeHandle(handle) })
-  return resolved.data.did
+  const normalized = normalizeHandle(handle)
+  // A repo discovered through the relay may have no handle in its DID document,
+  // so its wiki is addressed by DID. Those are already resolved.
+  if (normalized.startsWith('did:')) return normalized
+
+  const cached = getCachedDid(normalized)
+  if (cached) return cached
+
+  try {
+    const did = await withRetry(async () => {
+      const agent = getPublicAgent()
+      const resolved = await agent.resolveHandle({ handle: normalized })
+      return resolved.data.did
+    })
+    setCachedDid(normalized, did)
+    return did
+  } catch (err) {
+    throw new Error(toUserFacingNetworkError(err))
+  }
 }
 
 function normalizeHandle(handle: string): string {
@@ -104,7 +140,25 @@ function normalizeHandle(handle: string): string {
 }
 
 export function getPublicAgent(): Agent {
-  return new Agent('https://public.api.bsky.app')
+  if (!publicAgent) {
+    publicAgent = new Agent({
+      service: 'https://public.api.bsky.app',
+      fetch: createRetryFetch(),
+    })
+  }
+  return publicAgent
+}
+
+/** AppView for profiles/handles; repo lexicon reads use the account PDS instead. */
+export async function getReadAgentForRepo(
+  repoDid: string,
+  authenticatedAgent: Agent | null = null,
+  viewerDid: string | null = null,
+): Promise<Agent> {
+  if (authenticatedAgent && viewerDid === repoDid) {
+    return authenticatedAgent
+  }
+  return getRepoReadAgent(repoDid)
 }
 
 export function generateRecordKey(): string {

@@ -1,0 +1,25 @@
+{
+	"lexicon": 1,
+	"id": "wiki.pckt.permissions",
+	"defs": {
+		"main": {
+			"type": "permission-set",
+			"title": "pckt.wiki",
+			"detail": "Save wikis to your library and keep your map exploration progress.",
+			"permissions": [
+				{
+					"type": "permission",
+					"resource": "repo",
+					"collection": [
+						"wiki.pckt.bookmark",
+						"wiki.pckt.mapProgress",
+						"wiki.pckt.policy",
+						"wiki.pckt.pageGrant",
+						"wiki.pckt.suggestion",
+						"wiki.pckt.approvedMedia"
+					]
+				}
+			]
+		}
+	}
+}

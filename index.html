@@ -6,20 +6,42 @@
     <meta name="description" content="Build your personal wiki on the open social web. Powered by AT Protocol." />
     <meta property="og:title" content="pckt.wiki" />
     <meta property="og:description" content="Build your personal wiki on the open social web." />
-    <meta property="og:image" content="/og-image.png" />
+    <meta property="og:image" content="%SITE_URL%og-image.png" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="pckt" />
-    <link rel="icon" href="/favicon.ico" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="%BASE_URL%apple-touch-icon.png" />
     <link rel="preconnect" href="https://cdn.bsky.app" crossorigin />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,200..900;1,7..72,200..900&family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap"
-      rel="stylesheet"
-    />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <title>pckt.wiki</title>
+    <script>
+      (function () {
+        // AT Protocol OAuth requires 127.0.0.1, not localhost.
+        if (
+          location.hostname === 'localhost' &&
+          (location.protocol === 'http:' || location.protocol === 'https:')
+        ) {
+          var url = new URL(location.href)
+          url.hostname = '127.0.0.1'
+          location.replace(url.href)
+          return
+        }
+
+        var mode = 'auto'
+        try {
+          var raw = localStorage.getItem('pckt.wiki.theme')
+          if (raw) {
+            var theme = JSON.parse(raw)
+            if (theme.mode) mode = theme.mode
+          }
+        } catch (e) {}
+        var dark =
+          mode === 'dark' ||
+          (mode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+        document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
+      })()
+    </script>
   </head>
   <body>
     <div id="app"></div>

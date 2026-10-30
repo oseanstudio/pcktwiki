@@ -1,23 +1,13 @@
-const PRODUCTION_CLIENT_ID = 'https://pckt.wiki/client-metadata.json'
-const PRODUCTION_REDIRECT_URI = 'https://pckt.wiki/'
-
-export function getOAuthConfig() {
-  const isDev = import.meta.env.DEV
-  if (isDev) {
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'http://127.0.0.1:5173'
-    return {
-      clientId: origin,
-      redirectUri: `${origin}/`,
-      handleResolver: 'https://bsky.app',
-    }
-  }
-
-  return {
-    clientId: PRODUCTION_CLIENT_ID,
-    redirectUri: PRODUCTION_REDIRECT_URI,
-    handleResolver: 'https://bsky.app',
-  }
-}
+import {
+  AtprotoDohHandleResolver,
+  type HandleResolver,
+} from '@atproto/oauth-client-browser'
+import { buildAtprotoLoopbackClientMetadata } from '@atproto/oauth-types'
+// Single source for the scope — vite.config.ts reads the same constant when it
+// generates client-metadata.json, so the served document and the request the
+// app makes cannot drift apart (the PDS compares them and fails the
+// authorization outright on a mismatch).
+import { OAUTH_SCOPE } from '@/lib/lichen/collections'
 
 export function normalizeHandle(input: string): string {
   const trimmed = input.trim()
@@ -26,29 +16,54 @@ export function normalizeHandle(input: string): string {
   return trimmed
 }
 
-export function handleToWikiPath(handle: string): string {
-  const normalized = normalizeHandle(handle)
-  return `/@${encodeURIComponent(normalized)}`
+/**
+ * Where this build is deployed — a custom domain, or a GitHub Pages project
+ * page served under a subpath. Set at build time from VITE_SITE_URL, which also
+ * generates the matching client-metadata.json; the two are the same string by
+ * construction, and the PDS rejects the login if they ever disagree.
+ */
+const SITE_URL = __SITE_URL__
+const PRODUCTION_CLIENT_ID = `${SITE_URL}client-metadata.json`
+const PRODUCTION_REDIRECT_URI = SITE_URL
+
+/** DNS-over-HTTPS resolver — works for handles on any PDS, including custom domains. */
+let handleResolver: HandleResolver | null = null
+
+export function getHandleResolver(): HandleResolver {
+  if (!handleResolver) {
+    handleResolver = new AtprotoDohHandleResolver({
+      dohEndpoint: 'https://dns.google/resolve',
+    })
+  }
+  return handleResolver
 }
 
-export function slugify(value: string): string {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/[\s_-]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 120)
+export function getOAuthConfig() {
+  const isDev = import.meta.env.DEV
+  if (isDev) {
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'http://127.0.0.1:5173'
+    return {
+      clientId: origin,
+      redirectUri: `${origin}${import.meta.env.BASE_URL}`,
+    }
+  }
+
+  return {
+    clientId: PRODUCTION_CLIENT_ID,
+    redirectUri: PRODUCTION_REDIRECT_URI,
+  }
 }
 
-export function isValidSlug(slug: string): boolean {
-  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)
-}
-
-export function atUriToPath(atUri: string): { did: string; collection: string; rkey: string } | null {
-  const match = atUri.match(/^at:\/\/([^/]+)\/([^/]+)\/(.+)$/)
-  if (!match) return null
-  return { did: match[1], collection: match[2], rkey: match[3] }
+/**
+ * Loopback OAuth metadata for local dev. No client-metadata.json is fetched over
+ * the network, so dev works without any deployment URL configured.
+ */
+export function getDevLoopbackClientMetadata() {
+  const { redirectUri } = getOAuthConfig()
+  return buildAtprotoLoopbackClientMetadata({
+    redirect_uris: [redirectUri],
+    scope: OAUTH_SCOPE,
+  })
 }
 
 export function parsePcktBlogUrl(url: string): string | null {

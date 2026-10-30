@@ -1,56 +1,132 @@
-import type { WikiTheme } from '@/types/wiki'
-import { DEFAULT_THEME } from '@/types/wiki'
+import type { PcktTheme } from '@/types/lichen'
+import { DEFAULT_PCKT_THEME, PCKT_THEME_KEY } from '@/types/lichen'
+import { accentHover, adjustColor, contentFontStack, hexToRgba } from '@/lib/theme-colors'
 
-export function applyWikiTheme(theme?: WikiTheme): void {
-  const merged = { ...DEFAULT_THEME, ...theme }
+export type ResolvedThemeMode = 'light' | 'dark'
+
+export function resolveThemeMode(mode?: PcktTheme['mode']): ResolvedThemeMode {
+  const resolved = mode ?? 'auto'
+  if (resolved === 'dark') return 'dark'
+  if (resolved === 'auto') {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  }
+  return 'light'
+}
+
+function setOrClear(root: HTMLElement, prop: string, value: string | undefined | null) {
+  if (value) root.style.setProperty(prop, value)
+  else root.style.removeProperty(prop)
+}
+
+export function applyWikiTheme(theme?: PcktTheme): void {
+  const merged = { ...DEFAULT_PCKT_THEME, ...theme }
   const root = document.documentElement
 
-  root.style.setProperty('--pckt-accent', merged.accentColor ?? DEFAULT_THEME.accentColor!)
-  root.style.setProperty('--pckt-accent-hover', adjustColor(merged.accentColor ?? DEFAULT_THEME.accentColor!, 15))
-  root.style.setProperty('--pckt-accent-soft', hexToRgba(merged.accentColor ?? DEFAULT_THEME.accentColor!, 0.12))
-  root.style.setProperty('--pckt-font-content', `'${merged.fontFamily}', 'Lora', Georgia, serif`)
+  const accent = merged.accentColor ?? DEFAULT_PCKT_THEME.accentColor!
+  root.style.setProperty('--pckt-accent', accent)
+  root.style.setProperty('--pckt-accent-hover', accentHover(accent))
+  root.style.setProperty('--pckt-link', accent)
+  root.style.setProperty('--pckt-accent-soft', hexToRgba(accent, 0.12))
+  root.style.setProperty('--pckt-font-content', contentFontStack(merged.fontFamily))
 
-  const mode = merged.mode ?? 'light'
-  if (mode === 'dark') {
-    root.setAttribute('data-theme', 'dark')
-  } else if (mode === 'auto') {
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-    root.setAttribute('data-theme', prefersDark ? 'dark' : 'light')
+  setOrClear(root, '--pckt-bg', merged.bgColor)
+  // Prefer an explicit card/sidebar color, otherwise stay flat with the page bg.
+  setOrClear(root, '--pckt-bg-elevated', merged.cardColor ?? merged.bgColor)
+  setOrClear(root, '--pckt-bg-muted', merged.sidebarColor ?? merged.bgColor)
+  // Wiki layout regions: only paint when the user set an explicit color so the
+  // default stays a flat transparent surface over --pckt-bg.
+  setOrClear(root, '--pckt-wiki-card-bg', merged.cardColor)
+  setOrClear(root, '--pckt-wiki-sidebar-bg', merged.sidebarColor)
+  if (merged.sidebarColor ?? merged.bgColor) {
+    root.style.setProperty(
+      '--pckt-bg-subtle',
+      adjustColor((merged.sidebarColor ?? merged.bgColor)!, -12),
+    )
   } else {
-    root.setAttribute('data-theme', 'light')
+    root.style.removeProperty('--pckt-bg-subtle')
   }
+  setOrClear(root, '--pckt-header-bg', merged.headerColor ?? merged.bgColor)
+
+  root.setAttribute('data-theme', resolveThemeMode(merged.mode))
 
   root.classList.remove('layout-width-narrow', 'layout-width-medium', 'layout-width-wide')
   root.classList.add(`layout-width-${merged.layoutWidth ?? 'medium'}`)
 }
 
-function hexToRgba(hex: string, alpha: number): string {
-  const normalized = hex.replace('#', '')
-  const full = normalized.length === 3
-    ? normalized.split('').map((c) => c + c).join('')
-    : normalized
-  const num = Number.parseInt(full, 16)
-  const r = (num >> 16) & 255
-  const g = (num >> 8) & 255
-  const b = num & 255
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+let systemThemeCleanup: (() => void) | null = null
+
+export function initSystemThemeListener(): void {
+  systemThemeCleanup?.()
+  const mq = window.matchMedia('(prefers-color-scheme: dark)')
+  const handler = () => {
+    const local = loadLocalTheme()
+    if ((local.mode ?? 'auto') === 'auto') {
+      applyWikiTheme(local)
+    }
+  }
+  mq.addEventListener('change', handler)
+  systemThemeCleanup = () => mq.removeEventListener('change', handler)
 }
 
-function adjustColor(hex: string, amount: number): string {
-  const normalized = hex.replace('#', '')
-  const full = normalized.length === 3
-    ? normalized.split('').map((c) => c + c).join('')
-    : normalized
-  const num = Number.parseInt(full, 16)
-  let r = ((num >> 16) & 255) + amount
-  let g = ((num >> 8) & 255) + amount
-  let b = (num & 255) + amount
-  r = Math.max(0, Math.min(255, r))
-  g = Math.max(0, Math.min(255, g))
-  b = Math.max(0, Math.min(255, b))
-  return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`
+export function saveLocalTheme(theme: PcktTheme): void {
+  localStorage.setItem(PCKT_THEME_KEY, JSON.stringify(theme))
+}
+
+export function loadLocalTheme(): PcktTheme {
+  try {
+    const raw = localStorage.getItem(PCKT_THEME_KEY)
+    if (!raw) return { ...DEFAULT_PCKT_THEME }
+    return { ...DEFAULT_PCKT_THEME, ...JSON.parse(raw) }
+  } catch {
+    return { ...DEFAULT_PCKT_THEME }
+  }
 }
 
 export function resetAppTheme(): void {
-  applyWikiTheme(DEFAULT_THEME)
+  applyWikiTheme(loadLocalTheme())
+}
+
+/** Pull presentation fields off a wiki record into a PcktTheme patch. */
+export function themeFromWiki(wiki: {
+  theme?: 'light' | 'dark'
+  accentColor?: string
+  bgColor?: string
+  cardColor?: string
+  sidebarColor?: string
+  headerColor?: string
+  fontFamily?: string
+  layoutWidth?: PcktTheme['layoutWidth']
+}): PcktTheme {
+  return {
+    ...(wiki.theme ? { mode: wiki.theme } : {}),
+    ...(wiki.accentColor ? { accentColor: wiki.accentColor } : {}),
+    ...(wiki.bgColor ? { bgColor: wiki.bgColor } : {}),
+    ...(wiki.cardColor ? { cardColor: wiki.cardColor } : {}),
+    ...(wiki.sidebarColor ? { sidebarColor: wiki.sidebarColor } : {}),
+    ...(wiki.headerColor ? { headerColor: wiki.headerColor } : {}),
+    ...(wiki.fontFamily ? { fontFamily: wiki.fontFamily } : {}),
+    ...(wiki.layoutWidth ? { layoutWidth: wiki.layoutWidth } : {}),
+  }
+}
+
+export function wikiHasCustomTheme(wiki: {
+  theme?: string
+  accentColor?: string
+  bgColor?: string
+  cardColor?: string
+  sidebarColor?: string
+  headerColor?: string
+  fontFamily?: string
+  layoutWidth?: string
+}): boolean {
+  return !!(
+    wiki.theme ||
+    wiki.accentColor ||
+    wiki.bgColor ||
+    wiki.cardColor ||
+    wiki.sidebarColor ||
+    wiki.headerColor ||
+    wiki.fontFamily ||
+    wiki.layoutWidth
+  )
 }

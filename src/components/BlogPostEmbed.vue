@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import type { StandardSiteDocument, StandardSitePublication } from '@/types/wiki'
+import type { StandardSiteDocument, StandardSitePublication } from '@/types/lichen'
 import { getPublicAgent } from '@/lib/atproto/auth'
 import {
   documentToPcktBlogUrl,
@@ -35,7 +35,7 @@ onMounted(async () => {
 })
 
 function externalUrl(): string | null {
-  if (props.url) return props.url
+  if (props.url && /^https?:\/\//i.test(props.url)) return props.url
   if (post.value) return documentToPcktBlogUrl(post.value, props.publications?.[0]?.url)
   return null
 }
@@ -79,7 +79,7 @@ function externalUrl(): string | null {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--pckt-accent);
+  color: var(--pckt-red);
   font-weight: 700;
 }
 

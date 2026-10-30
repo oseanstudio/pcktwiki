@@ -1,0 +1,62 @@
+{
+	"lexicon": 1,
+	"id": "wiki.lichen.noteRevision",
+	"defs": {
+		"main": {
+			"type": "record",
+			"description": "A revision to a note, stored as a diff from the previous revision.",
+			"key": "tid",
+			"record": {
+				"type": "object",
+				"required": ["noteRef", "diff", "diffFormat", "createdAt"],
+				"properties": {
+					"noteRef": {
+						"type": "string",
+						"format": "at-uri",
+						"description": "AT-URI of the parent note record."
+					},
+					"parentRevision": {
+						"type": "string",
+						"format": "at-uri",
+						"description": "AT-URI of the previous revision. Omitted for the first revision of a note."
+					},
+					"diff": {
+						"type": "string",
+						"maxLength": 1000000,
+						"description": "The diff content in the format specified by diffFormat."
+					},
+					"diffFormat": {
+						"type": "string",
+						"maxLength": 32,
+						"knownValues": ["diff-match-patch"],
+						"description": "Format of the diff string."
+					},
+					"message": {
+						"type": "string",
+						"maxLength": 1024,
+						"description": "Optional commit message describing this revision."
+					},
+					"snapshot": {
+						"type": "string",
+						"maxLength": 1000000,
+						"description": "Full note content as of this revision, written periodically so replay can re-anchor instead of depending on every earlier diff applying cleanly."
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "datetime",
+						"description": "When this revision was created."
+					},
+					"blobs": {
+						"type": "array",
+						"items": {
+							"type": "blob",
+							"accept": ["image/jpeg", "image/png", "image/gif", "image/webp"],
+							"maxSize": 2097152
+						},
+						"description": "Blobs referenced by this revision's content."
+					}
+				}
+			}
+		}
+	}
+}

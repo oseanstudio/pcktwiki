@@ -1,0 +1,43 @@
+{
+	"lexicon": 1,
+	"id": "wiki.pckt.pageGrant",
+	"defs": {
+		"main": {
+			"type": "record",
+			"description": "A per-article permission grant, stored in the wiki owner's repo. The rkey is a TID. Grants scope a single member's access to one article of one wiki, overriding the wiki-wide picture for that page.",
+			"key": "tid",
+			"record": {
+				"type": "object",
+				"required": ["wikiRef", "noteSlug", "memberDid", "role", "createdAt"],
+				"properties": {
+					"wikiRef": {
+						"type": "string",
+						"format": "at-uri",
+						"description": "AT-URI of the wiki containing the article."
+					},
+					"noteSlug": {
+						"type": "string",
+						"maxLength": 256,
+						"description": "Slug of the granted article. Slugs are permanent within a wiki, so the grant survives record rewrites."
+					},
+					"memberDid": {
+						"type": "string",
+						"maxLength": 2048,
+						"description": "DID of the member being granted access."
+					},
+					"role": {
+						"type": "string",
+						"maxLength": 32,
+						"knownValues": ["admin", "editor", "suggester", "viewer"],
+						"description": "The member's role on this article. 'admin' can also review suggestions for it; 'editor' can propose full edits; 'suggester' can propose text-only edits; 'viewer' can read."
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "datetime",
+						"description": "When the grant was made."
+					}
+				}
+			}
+		}
+	}
+}

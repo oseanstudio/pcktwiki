@@ -2,33 +2,58 @@
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { useWikiStore } from '@/stores/wiki'
-import { handleToWikiPath } from '@/lib/config'
-import { applyWikiTheme } from '@/lib/theme'
+import { useLichenStore } from '@/stores/lichen'
+import { visibilityLabel } from '@/lib/lichen/collections'
+import {
+  WIKI_TRASH_RETENTION_DAYS,
+  formatWikiTrashCountdown,
+} from '@/lib/lichen/wiki-trash'
+import type { LichenWikiRecord } from '@/types/lichen'
 
 const auth = useAuthStore()
-const wiki = useWikiStore()
+const lichen = useLichenStore()
 const initializing = ref(true)
+const trashBusyUri = ref<string | null>(null)
+const trashError = ref('')
 
-const wikiPath = computed(() => (auth.handle ? handleToWikiPath(auth.handle) : null))
+const activeWikis = computed(() => lichen.activeWikis)
+const trashedWikis = computed(() => lichen.trashedWikis)
 
 onMounted(async () => {
   if (!auth.agent) return
   try {
-    await wiki.loadOwnWiki(auth.agent)
-    await wiki.ensureInitialized(auth.agent, auth.handle ?? undefined)
-    if (wiki.space?.theme) applyWikiTheme(wiki.space.theme)
+    await lichen.loadOwnerWikis(auth.agent)
+    await lichen.purgeExpiredTrashedWikis(auth.agent)
   } finally {
     initializing.value = false
   }
 })
 
-async function createPage() {
-  if (!auth.agent) return
-  const title = window.prompt('Page title')
-  if (!title) return
-  const page = await wiki.createPage(auth.agent, title)
-  window.location.href = `/edit/${page.slug}`
+async function restore(wiki: LichenWikiRecord) {
+  if (!auth.agent || trashBusyUri.value) return
+  trashBusyUri.value = wiki.uri
+  trashError.value = ''
+  try {
+    await lichen.restoreWiki(auth.agent, wiki)
+  } catch (err) {
+    trashError.value = err instanceof Error ? err.message : 'Could not restore wiki'
+  } finally {
+    trashBusyUri.value = null
+  }
+}
+
+async function purgeForever(wiki: LichenWikiRecord) {
+  if (!auth.agent || trashBusyUri.value) return
+  if (!confirm(`Permanently delete “${wiki.name}”? This cannot be undone.`)) return
+  trashBusyUri.value = wiki.uri
+  trashError.value = ''
+  try {
+    await lichen.purgeWiki(auth.agent, wiki)
+  } catch (err) {
+    trashError.value = err instanceof Error ? err.message : 'Could not delete wiki'
+  } finally {
+    trashBusyUri.value = null
+  }
 }
 </script>
 
@@ -37,71 +62,81 @@ async function createPage() {
     <div class="dashboard-inner">
       <header class="dashboard-header">
         <div>
-          <h1>Dashboard</h1>
-          <p class="muted">Manage your wiki for @{{ auth.handle }}</p>
+          <h1>My wikis</h1>
+          <p class="muted">@{{ auth.handle }} · Lichen records on your PDS</p>
         </div>
-        <div class="actions">
-          <RouterLink v-if="wikiPath" :to="wikiPath" class="btn btn-secondary">View wiki</RouterLink>
-          <RouterLink to="/settings" class="btn btn-secondary">Settings</RouterLink>
-          <button type="button" class="btn btn-primary" @click="createPage">New page</button>
-        </div>
+        <RouterLink to="/wiki/new" class="btn btn-primary">Create wiki</RouterLink>
       </header>
 
-      <div v-if="initializing || wiki.loading" class="muted">Loading your wiki…</div>
-      <div v-else-if="wiki.error" class="error-text">{{ wiki.error }}</div>
+      <div v-if="initializing || lichen.loading" class="muted">Loading wikis…</div>
+      <div v-else-if="lichen.error" class="error-text">{{ lichen.error }}</div>
 
       <template v-else>
-        <section class="stats">
-          <div class="stat card">
-            <span class="stat-value">{{ wiki.pages.length }}</span>
-            <span class="stat-label">Pages</span>
-          </div>
-          <div class="stat card">
-            <span class="stat-value">{{ wiki.blogPosts.length }}</span>
-            <span class="stat-label">Blog posts imported</span>
-          </div>
-          <div class="stat card">
-            <span class="stat-value">{{ wiki.publications.length }}</span>
-            <span class="stat-label">Publications</span>
-          </div>
-        </section>
+        <div v-if="activeWikis.length === 0" class="empty card">
+          <h2>No wikis yet</h2>
+          <p class="muted">Create your first wiki using Lichen lexicons. It will interoperate with lichen.wiki.</p>
+          <RouterLink to="/wiki/new" class="btn btn-primary">Create wiki</RouterLink>
+        </div>
 
-        <section class="pages-section card">
-          <h2>Pages</h2>
-          <ul v-if="wiki.pages.length" class="page-list">
-            <li v-for="page in wiki.pages" :key="page.slug" class="page-item">
+        <ul v-else class="wiki-list">
+          <li v-for="wiki in activeWikis" :key="wiki.uri" class="wiki-item card">
+            <div>
+              <strong>{{ wiki.name }}</strong>
+              <span class="slug">/{{ wiki.slug }}</span>
+              <span class="badge">{{ visibilityLabel(wiki.visibility) }}</span>
+            </div>
+            <div class="actions">
+              <RouterLink
+                :to="`/@${auth.handle}/${wiki.slug}`"
+                class="btn btn-secondary"
+              >
+                Open
+              </RouterLink>
+              <RouterLink
+                :to="`/@${auth.handle}/${wiki.slug}/settings`"
+                class="btn btn-ghost"
+              >
+                Settings
+              </RouterLink>
+            </div>
+          </li>
+        </ul>
+
+        <section v-if="trashedWikis.length" class="trash-section">
+          <header class="trash-header">
+            <h2>Recently deleted</h2>
+            <p class="muted">
+              Restorable for {{ WIKI_TRASH_RETENTION_DAYS }} days, then permanently removed.
+            </p>
+          </header>
+          <p v-if="trashError" class="error-text">{{ trashError }}</p>
+          <ul class="wiki-list">
+            <li v-for="wiki in trashedWikis" :key="wiki.uri" class="wiki-item card trash-item">
               <div>
-                <strong>{{ page.title }}</strong>
-                <span class="slug">/{{ page.slug }}</span>
-                <span v-if="page.pageType === 'blog-list'" class="badge">Blog</span>
+                <strong>{{ wiki.name }}</strong>
+                <span class="slug">/{{ wiki.slug }}</span>
+                <span class="badge badge-trash">{{ formatWikiTrashCountdown(wiki) }}</span>
               </div>
-              <div class="page-actions">
-                <RouterLink :to="`/edit/${page.slug}`" class="btn btn-ghost">Edit</RouterLink>
+              <div class="actions">
                 <button
-                  v-if="page.slug !== 'home'"
+                  type="button"
+                  class="btn btn-secondary"
+                  :disabled="trashBusyUri === wiki.uri"
+                  @click="restore(wiki)"
+                >
+                  {{ trashBusyUri === wiki.uri ? 'Working…' : 'Restore' }}
+                </button>
+                <button
                   type="button"
                   class="btn btn-ghost"
-                  @click="wiki.removePage(auth.agent!, page)"
+                  :disabled="trashBusyUri === wiki.uri"
+                  @click="purgeForever(wiki)"
                 >
-                  Delete
+                  Delete forever
                 </button>
               </div>
             </li>
           </ul>
-          <p v-else class="muted">No pages yet.</p>
-        </section>
-
-        <section v-if="wiki.blogPosts.length" class="import-section card">
-          <h2>Imported from pckt.blog</h2>
-          <p class="muted">These posts are read from your AT Protocol records and can be embedded in wiki pages.</p>
-          <ul class="import-list">
-            <li v-for="post in wiki.blogPosts.slice(0, 5)" :key="post.uri">
-              {{ post.title ?? 'Untitled' }}
-            </li>
-          </ul>
-          <p v-if="wiki.blogPosts.length > 5" class="muted">
-            + {{ wiki.blogPosts.length - 5 }} more posts
-          </p>
         </section>
       </template>
     </div>
@@ -132,66 +167,24 @@ async function createPage() {
   font-family: var(--pckt-font-content);
 }
 
-.actions {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+.empty {
+  padding: 1.5rem;
 }
 
-.stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-.stat {
-  padding: 1rem;
-  text-align: center;
-}
-
-.stat-value {
-  display: block;
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: var(--pckt-accent);
-}
-
-.stat-label {
-  font-size: 0.8125rem;
-  color: var(--pckt-text-muted);
-}
-
-.pages-section,
-.import-section {
-  padding: 1.25rem;
-  margin-bottom: 1rem;
-}
-
-.pages-section h2,
-.import-section h2 {
-  margin: 0 0 1rem;
-  font-size: 1rem;
-}
-
-.page-list,
-.import-list {
+.wiki-list {
   list-style: none;
   margin: 0;
   padding: 0;
+  display: grid;
+  gap: 0.75rem;
 }
 
-.page-item {
+.wiki-item {
+  padding: 1rem 1.25rem;
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
   gap: 1rem;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid var(--pckt-border);
-}
-
-.page-item:last-child {
-  border-bottom: none;
 }
 
 .slug {
@@ -206,19 +199,41 @@ async function createPage() {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   background: var(--pckt-accent-soft);
-  color: var(--pckt-accent);
+  color: var(--pckt-red);
   padding: 0.125rem 0.375rem;
   border-radius: 4px;
   font-weight: 700;
 }
 
-.page-actions {
-  display: flex;
-  gap: 0.25rem;
+.badge-trash {
+  text-transform: none;
+  letter-spacing: 0;
+  background: color-mix(in srgb, var(--pckt-danger) 12%, transparent);
+  color: var(--pckt-danger);
 }
 
-.import-list li {
-  padding: 0.375rem 0;
-  color: var(--pckt-text-muted);
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.trash-section {
+  margin-top: 2.5rem;
+}
+
+.trash-header {
+  margin-bottom: 0.75rem;
+}
+
+.trash-header h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+  font-family: var(--pckt-font-ui);
+}
+
+.trash-item {
+  opacity: 0.92;
+  border-style: dashed;
 }
 </style>

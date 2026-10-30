@@ -1,0 +1,33 @@
+{
+	"lexicon": 1,
+	"id": "wiki.pckt.mapProgress",
+	"defs": {
+		"main": {
+			"type": "record",
+			"description": "One reader's map exploration progress for a single wiki: which places they have discovered. The rkey is a TID; the wiki it belongs to lives in the record body. Stored on the reader's own PDS so progress follows the account across devices and appviews. Discovery is additive — clients merge by union rather than overwriting, so a device that was offline cannot erase places found elsewhere.",
+			"key": "tid",
+			"record": {
+				"type": "object",
+				"required": ["wikiRef", "discovered", "updatedAt"],
+				"properties": {
+					"wikiRef": {
+						"type": "string",
+						"format": "at-uri",
+						"description": "AT-URI of the wiki this progress belongs to."
+					},
+					"discovered": {
+						"type": "array",
+						"maxLength": 2000,
+						"description": "Slugs of notes whose map location the reader has visited at least once.",
+						"items": { "type": "string", "maxLength": 256 }
+					},
+					"updatedAt": {
+						"type": "string",
+						"format": "datetime",
+						"description": "When this progress record was last written."
+					}
+				}
+			}
+		}
+	}
+}

@@ -1,0 +1,79 @@
+{
+	"lexicon": 1,
+	"id": "wiki.pckt.suggestion",
+	"defs": {
+		"main": {
+			"type": "record",
+			"description": "A proposed edit or photo submission for a wiki, stored in the AUTHOR's own repo (the author cannot write to the wiki owner's repo, so contributions travel as records in the author's repo and are discovered by apps indexing references to the wiki). The rkey is a TID.",
+			"key": "tid",
+			"record": {
+				"type": "object",
+				"required": ["wikiRef", "noteSlug", "kind", "createdAt"],
+				"properties": {
+					"wikiRef": {
+						"type": "string",
+						"format": "at-uri",
+						"description": "AT-URI of the target wiki."
+					},
+					"noteSlug": {
+						"type": "string",
+						"maxLength": 256,
+						"description": "Slug of the target article. May name an article that does not exist yet — approving such a suggestion creates it."
+					},
+					"kind": {
+						"type": "string",
+						"maxLength": 32,
+						"knownValues": ["edit", "image"],
+						"description": "'edit' proposes article content; 'image' submits photos for the approved-media queue."
+					},
+					"content": {
+						"type": "string",
+						"maxLength": 1000000,
+						"description": "For kind 'edit': the full proposed article content as markdown. Reviewers diff this against the live article."
+					},
+					"title": {
+						"type": "string",
+						"maxLength": 256,
+						"description": "For kind 'edit': proposed article title, when the author suggests renaming."
+					},
+					"baseRevision": {
+						"type": "string",
+						"format": "at-uri",
+						"description": "AT-URI of the wiki.lichen.noteRevision the proposal was made against, when known. Review apps use it to detect drift."
+					},
+					"message": {
+						"type": "string",
+						"maxLength": 1024,
+						"description": "Optional note from the author explaining the change."
+					},
+					"blobs": {
+						"type": "array",
+						"maxLength": 20,
+						"items": {
+							"type": "blob",
+							"accept": ["image/jpeg", "image/png", "image/gif", "image/webp"],
+							"maxSize": 2097152
+						},
+						"description": "For kind 'image': the submitted photos, uploaded to the author's own PDS. An approving wiki owner re-uploads them to their own repo."
+					},
+					"alt": {
+						"type": "string",
+						"maxLength": 1024,
+						"description": "Alt text describing the submitted photo(s)."
+					},
+					"status": {
+						"type": "string",
+						"maxLength": 32,
+						"knownValues": ["pending", "approved", "rejected", "withdrawn"],
+						"description": "Author-side status. Apps should treat a suggestion as pending when this field is absent; the authoritative outcome is whatever the wiki owner publishes."
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "datetime",
+						"description": "When the suggestion was made."
+					}
+				}
+			}
+		}
+	}
+}
